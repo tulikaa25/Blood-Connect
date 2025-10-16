@@ -28,7 +28,8 @@ const AdminDashboard = () => {
       // Refresh appointments
       const res = await axios.get('/api/appointments/all');
       setAppointments(res.data);
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setMessage('Error checking in donor.');
     }
   };
@@ -40,7 +41,8 @@ const AdminDashboard = () => {
       // Refresh appointments
       const res = await axios.get('/api/appointments/all');
       setAppointments(res.data);
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setMessage('Error updating appointment status.');
     }
   };

@@ -1,6 +1,7 @@
 import Appointment from '../models/appointmentModel.js';
 import User from '../models/userModel.js';
 import Settings from '../models/settingsModel.js';
+import { sendWhatsAppMessage } from '../services/notificationService.js';
 
 // @desc    Get all available appointment slots
 // @route   GET /api/appointments/slots
@@ -132,6 +133,14 @@ export const bookAppointment = async (req, res) => {
             slotTime,
         });
 
+        // Send confirmation message
+        sendWhatsAppMessage(
+            donor.phone,
+            `Your appointment is confirmed for ${new Date(
+                slotDate
+            ).toLocaleDateString()} at ${slotTime}.`
+        );
+
         res.status(201).json(appointment);
     } catch (error) {
         console.error(error);
@@ -233,6 +242,11 @@ export const checkIn = async (req, res) => {
         appointment.checkInTime = new Date();
         
         await appointment.save();
+
+        // Send check-in message
+        const donor = await User.findById(appointment.donorId);
+        sendWhatsAppMessage(donor.phone, 'You have been checked in. Please wait to be called.');
+
         res.json(appointment);
 
     } catch (error) {
