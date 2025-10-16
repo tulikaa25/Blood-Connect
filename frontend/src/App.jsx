@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import Login from './components/user/Login';
-import Register from './components/user/Register';
-import Dashboard from './components/user/Dashboard';
-import Profile from './components/user/Profile';
-import LiveQueue from './components/user/LiveQueue';
-import AdminDashboard from './components/admin/AdminDashboard';
-import AdminSettings from './components/admin/AdminSettings';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import LiveQueue from './pages/LiveQueue';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminSettings from './admin/AdminSettings';
 import './App.css';
 
 const App = () => {
