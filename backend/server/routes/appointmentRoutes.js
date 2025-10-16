@@ -5,6 +5,7 @@ import {
     getMyAppointments,
     getAllAppointments,
     updateAppointmentStatus,
+    checkIn,
 } from '../controllers/appointmentController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -15,5 +16,6 @@ router.post('/book', protect, bookAppointment);
 router.get('/my', protect, getMyAppointments);
 router.get('/all', protect, admin, getAllAppointments);
 router.put('/:id/status', protect, admin, updateAppointmentStatus);
+router.post('/:id/checkin', protect, admin, checkIn);
 
 export default router;

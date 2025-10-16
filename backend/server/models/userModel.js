@@ -20,6 +20,17 @@ const screeningSchema = new mongoose.Schema({
     isPregnantOrBreastfeeding: Boolean,
 }, { _id: false });
 
+const donationHistorySchema = new mongoose.Schema({
+    donationDate: {
+        type: Date,
+        required: true,
+    },
+    appointmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Appointment',
+    },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -52,6 +63,7 @@ const userSchema = new mongoose.Schema({
     nextEligibleDate: {
         type: Date,
     },
+    donationHistory: [donationHistorySchema],
     role: {
         type: String,
         enum: ['donor', 'admin'],
@@ -59,8 +71,8 @@ const userSchema = new mongoose.Schema({
     },
     eligibilityStatus: {
         type: String,
-        enum: ['unchecked', 'eligible', 'ineligible', 'pending'],
-        default: 'unchecked',
+        enum: ['pending_screening', 'eligible', 'deferred'],
+        default: 'pending_screening',
     },
     screeningData: screeningSchema,
 }, { timestamps: true });

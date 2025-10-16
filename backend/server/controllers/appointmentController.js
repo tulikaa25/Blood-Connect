@@ -89,9 +89,16 @@ export const bookAppointment = async (req, res) => {
         const donor = await User.findById(donorId);
 
         // 1. Check donor eligibility
+        if (donor.eligibilityStatus !== 'eligible') {
+            return res.status(400).json({
+                message: `You are not eligible to donate. Please complete the screening form or wait until your deferral period is over.`,
+            });
+        }
         if (donor.nextEligibleDate && new Date() < new Date(donor.nextEligibleDate)) {
             return res.status(400).json({
-                message: `You are not eligible to donate until ${new Date(donor.nextEligibleDate).toLocaleDateString()}`,
+                message: `You are not eligible to donate until ${new Date(
+                    donor.nextEligibleDate
+                ).toLocaleDateString()}`,
             });
         }
 
@@ -108,7 +115,11 @@ export const bookAppointment = async (req, res) => {
         // 3. Check slot availability
         const settings = await Settings.getSingleton();
         const bookableBeds = settings.totalBeds - settings.bufferBeds;
-        const appointmentsInSlot = await Appointment.countDocuments({ slotDate, slotTime, status: 'booked' });
+        const appointmentsInSlot = await Appointment.countDocuments({
+            slotDate,
+            slotTime,
+            status: 'booked',
+        });
 
         if (appointmentsInSlot >= bookableBeds) {
             return res.status(400).json({ message: 'This slot is fully booked' });
@@ -122,7 +133,6 @@ export const bookAppointment = async (req, res) => {
         });
 
         res.status(201).json(appointment);
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error while booking appointment' });
@@ -181,16 +191,46 @@ export const updateAppointmentStatus = async (req, res) => {
 
         appointment.status = status;
 
-        // If donation is completed, update donor's eligibility
+        // If donation is completed, update donor's eligibility and history
         if (status === 'completed') {
             const threeMonthsFromNow = new Date();
             threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-            await User.findByIdAndUpdate(appointment.donorId, {
-                lastDonationDate: new Date(),
-                nextEligibleDate: threeMonthsFromNow,
+            
+            const donor = await User.findById(appointment.donorId);
+            donor.lastDonationDate = new Date();
+            donor.nextEligibleDate = threeMonthsFromNow;
+            donor.eligibilityStatus = 'deferred';
+            donor.donationHistory.push({
+                donationDate: new Date(),
+                appointmentId: appointment._id,
             });
-            // TODO: Add automation logic to auto-assign next donor
+            await donor.save();
         }
+        
+        await appointment.save();
+        res.json(appointment);
+
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Check-in a donor for their appointment (Admin)
+// @route   POST /api/appointments/:id/checkin
+// @access  Private/Admin
+export const checkIn = async (req, res) => {
+    const appointmentId = req.params.id;
+
+    try {
+        const appointment = await Appointment.findById(appointmentId);
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        // For now, a simple check-in. The complex logic will be added next.
+        appointment.status = 'checked-in';
+        appointment.checkInTime = new Date();
         
         await appointment.save();
         res.json(appointment);

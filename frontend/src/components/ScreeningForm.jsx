@@ -44,16 +44,27 @@ const ScreeningForm = () => {
     }
   };
 
+  const [message, setMessage] = useState('');
+
   const onSubmit = async (e) => {
     e.preventDefault();
-    // Logic to submit the form to the backend will be added here
-    console.log(formData);
+    try {
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+      const res = await axios.post('/api/screening/submit', formData, config);
+      setMessage(res.data.message);
+    } catch (err) {
+      setMessage(err.response.data.message);
+    }
   };
 
   return (
     <form onSubmit={onSubmit}>
       <h2>Pre-Booking Eligibility Form</h2>
-      
+      {message && <p>{message}</p>}
       <h4>Basic Details</h4>
       <input type="text" name="fullName" placeholder="Full Name" onChange={onChange} required />
       <input type="number" name="age" placeholder="Age (18-65)" onChange={onChange} required />

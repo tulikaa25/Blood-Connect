@@ -77,3 +77,15 @@ export const loginUser = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// @desc    Get user data
+// @route   GET /api/auth/me
+// @access  Private
+export const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
