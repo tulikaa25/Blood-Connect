@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './server/routes/authRoutes.js';
 import appointmentRoutes from './server/routes/appointmentRoutes.js';
 import screeningRoutes from './server/routes/screeningRoutes.js';
+import settingsRoutes from './server/routes/settingsRoutes.js';
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/screening', screeningRoutes);
+app.use('/api/settings', settingsRoutes);
 
 export default app;
