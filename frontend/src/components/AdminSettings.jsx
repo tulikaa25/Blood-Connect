@@ -33,9 +33,10 @@ const AdminSettings = () => {
           'Content-Type': 'application/json',
         },
       };
-      const res = await axios.put('/api/settings', settings, config);
+      await axios.put('/api/settings', settings, config);
       setMessage('Settings updated successfully.');
     } catch (err) {
+      console.error(err);
       setMessage('Error updating settings.');
     }
   };
