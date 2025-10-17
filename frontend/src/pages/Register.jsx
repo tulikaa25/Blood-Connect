@@ -1,95 +1,112 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 
-const Register = () => {
+const Register = ({ onRegisterSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    phone: '',
     password: '',
     password2: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const { name, email, password, password2 } = formData;
+  const { name, phone, password, password2 } = formData;
 
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (!name || !phone || !password || !password2) {
+      setError('Please fill in all fields');
+      return;
+    }
+
     if (password !== password2) {
-      console.log('Passwords do not match');
-    } else {
-      const newUser = {
-        name,
-        email,
-        password,
-      };
+      setError('Passwords do not match');
+      return;
+    }
 
-      try {
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        };
+    const newUser = { name, phone, password };
 
-        const body = JSON.stringify(newUser);
+    try {
+      setLoading(true);
+      const res = await axios.post('/auth/register', newUser); // centralized axios
+      console.log('Registration successful:', res.data);
 
-        const res = await axios.post('/api/auth/register', body, config);
-        console.log(res.data);
-      } catch (err) {
-        console.error(err.response.data);
-      }
+      if (onRegisterSuccess) onRegisterSuccess(res.data);
+
+      setLoading(false);
+      setFormData({ name: '', phone: '', password: '', password2: '' });
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Registration failed');
+      setLoading(false);
     }
   };
 
   return (
-    <>
+    <div>
       <h1>Sign Up</h1>
       <p>Create Your Account</p>
-      <form onSubmit={(e) => onSubmit(e)}>
+
+      {error && <p className="error">{error}</p>}
+
+      <form onSubmit={onSubmit}>
         <div>
           <input
             type="text"
             placeholder="Name"
             name="name"
             value={name}
-            onChange={(e) => onChange(e)}
+            onChange={onChange}
             required
           />
         </div>
+
         <div>
           <input
-            type="email"
-            placeholder="Email Address"
-            name="email"
-            value={email}
-            onChange={(e) => onChange(e)}
+            type="text"
+            placeholder="Phone Number"
+            name="phone"
+            value={phone}
+            onChange={onChange}
             required
           />
         </div>
+
         <div>
           <input
             type="password"
             placeholder="Password"
             name="password"
             value={password}
-            onChange={(e) => onChange(e)}
+            onChange={onChange}
             minLength="6"
+            required
           />
         </div>
+
         <div>
           <input
             type="password"
             placeholder="Confirm Password"
             name="password2"
             value={password2}
-            onChange={(e) => onChange(e)}
+            onChange={onChange}
             minLength="6"
+            required
           />
         </div>
-        <input type="submit" value="Register" />
+
+        <button type="submit" disabled={loading}>
+          {loading ? 'Registering...' : 'Register'}
+        </button>
       </form>
-    </>
+    </div>
   );
 };
 

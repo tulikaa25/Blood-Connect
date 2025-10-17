@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import AppointmentForm from './AppointmentForm';
 import ScreeningForm from './ScreeningForm';
 
@@ -7,33 +7,44 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchAppointments = async () => {
+    try {
+      const res = await axios.get('/appointments/my');
+      setAppointments(res.data);
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      setError('Failed to load appointments');
+    }
+  };
+
+  const fetchUserData = async () => {
+    try {
+      const userRes = await axios.get('/auth/me');
+      setUser(userRes.data);
+
+      await fetchAppointments();
+      setLoading(false);
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      setError('Failed to load user data');
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userRes = await axios.get('/api/auth/me');
-        setUser(userRes.data);
-
-        const appointmentsRes = await axios.get('/api/appointments/my');
-        setAppointments(appointmentsRes.data);
-
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchUserData();
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div>
       <h1>Dashboard</h1>
+
+      {error && <p className="error">{error}</p>}
+
       <h2>My Appointments</h2>
       {appointments.length > 0 ? (
         <ul>
@@ -49,7 +60,7 @@ const Dashboard = () => {
 
       <h2>Book an Appointment</h2>
       {user && user.eligibilityStatus === 'eligible' ? (
-        <AppointmentForm />
+        <AppointmentForm onBookingSuccess={fetchAppointments} />
       ) : user && user.eligibilityStatus === 'pending_screening' ? (
         <div>
           <p>You must complete the screening form before you can book an appointment.</p>

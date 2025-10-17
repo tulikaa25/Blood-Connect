@@ -1,21 +1,9 @@
 import express from 'express';
-import {
-    getAvailableSlots,
-    bookAppointment,
-    getMyAppointments,
-    getAllAppointments,
-    updateAppointmentStatus,
-    checkIn,
-} from '../controllers/appointmentController.js';
+import {getSlots} from '../controllers/appointmentController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/slots', getAvailableSlots);
-router.post('/book', protect, bookAppointment);
-router.get('/my', protect, getMyAppointments);
-router.get('/all', protect, admin, getAllAppointments);
-router.put('/:id/status', protect, admin, updateAppointmentStatus);
-router.post('/:id/checkin', protect, admin, checkIn);
+router.get('/slots', protect, getSlots);  // protect middleware ensures req.user is available
 
 export default router;

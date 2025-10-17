@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 
 const ScreeningForm = () => {
   const [formData, setFormData] = useState({
@@ -28,8 +28,14 @@ const ScreeningForm = () => {
     isPregnantOrBreastfeeding: false,
   });
 
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    // Handle nested medicalConditions checkboxes
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData({
@@ -44,88 +50,162 @@ const ScreeningForm = () => {
     }
   };
 
-  const [message, setMessage] = useState('');
-
   const onSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setMessage('');
+
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      };
-      const res = await axios.post('/api/screening/submit', formData, config);
-      setMessage(res.data.message);
+      setLoading(true);
+      const res = await axios.post('/screening/submit', formData);
+      setMessage(res.data.message || 'Screening submitted successfully');
+      setLoading(false);
     } catch (err) {
-      setMessage(err.response.data.message);
+      console.error(err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to submit screening');
+      setLoading(false);
     }
   };
 
   return (
     <form onSubmit={onSubmit}>
       <h2>Pre-Booking Eligibility Form</h2>
-      {message && <p>{message}</p>}
+      {message && <p className="success">{message}</p>}
+      {error && <p className="error">{error}</p>}
+
       <h4>Basic Details</h4>
-      <input type="text" name="fullName" placeholder="Full Name" onChange={onChange} required />
-      <input type="number" name="age" placeholder="Age (18-65)" onChange={onChange} required />
+      <input
+        type="text"
+        name="fullName"
+        placeholder="Full Name"
+        onChange={onChange}
+        required
+      />
+      <input
+        type="number"
+        name="age"
+        placeholder="Age (18-65)"
+        onChange={onChange}
+        required
+      />
       <select name="gender" onChange={onChange} required>
         <option value="">Select Gender</option>
         <option value="male">Male</option>
         <option value="female">Female</option>
         <option value="other">Other</option>
       </select>
-      <input type="number" name="weight" placeholder="Weight (>= 45 kg)" onChange={onChange} required />
-      <input type="text" name="contact" placeholder="Contact Number" onChange={onChange} required />
+      <input
+        type="number"
+        name="weight"
+        placeholder="Weight (>= 45 kg)"
+        onChange={onChange}
+        required
+      />
+      <input
+        type="text"
+        name="contact"
+        placeholder="Contact Number"
+        onChange={onChange}
+        required
+      />
 
       <h4>Medical History</h4>
       <label>Have you ever had the following?</label>
-      <div><input type="checkbox" name="medicalConditions.hiv" onChange={onChange} /> HIV/AIDS, Hepatitis B/C, Syphilis, Malaria</div>
-      <div><input type="checkbox" name="medicalConditions.heartDisease" onChange={onChange} /> Heart disease, uncontrolled hypertension, or diabetes</div>
-      <div><input type="checkbox" name="medicalConditions.cancer" onChange={onChange} /> Cancer, epilepsy, bleeding/clotting disorders</div>
-      <div><input type="checkbox" name="medicalConditions.tuberculosis" onChange={onChange} /> Tuberculosis (active or past 2 years)</div>
-      
-      <label>Are you currently taking long-term medications?</label>
-      <select name="longTermMedications" onChange={onChange}>
+      <div>
+        <input type="checkbox" name="medicalConditions.hiv" onChange={onChange} /> HIV/AIDS
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.hepatitis" onChange={onChange} /> Hepatitis B/C
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.syphilis" onChange={onChange} /> Syphilis
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.malaria" onChange={onChange} /> Malaria
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.heartDisease" onChange={onChange} /> Heart Disease
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.cancer" onChange={onChange} /> Cancer
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.epilepsy" onChange={onChange} /> Epilepsy
+      </div>
+      <div>
+        <input type="checkbox" name="medicalConditions.tuberculosis" onChange={onChange} /> Tuberculosis
+      </div>
+
+      <label>Currently taking long-term medications?</label>
+      <select
+        name="longTermMedications"
+        onChange={(e) => setFormData({ ...formData, longTermMedications: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
-      {formData.longTermMedications && <textarea name="medicationDetails" placeholder="Please specify" onChange={onChange}></textarea>}
+      {formData.longTermMedications && (
+        <textarea
+          name="medicationDetails"
+          placeholder="Please specify"
+          onChange={onChange}
+        ></textarea>
+      )}
 
-      <label>Have you ever been permanently deferred from donating?</label>
-      <select name="permanentlyDeferred" onChange={onChange}>
+      <label>Permanently deferred from donating before?</label>
+      <select
+        name="permanentlyDeferred"
+        onChange={(e) => setFormData({ ...formData, permanentlyDeferred: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
 
       <h4>Donation History</h4>
-      <label>Have you donated blood/plasma before?</label>
-      <select name="hasDonatedBefore" onChange={onChange}>
+      <label>Have you donated before?</label>
+      <select
+        name="hasDonatedBefore"
+        onChange={(e) => setFormData({ ...formData, hasDonatedBefore: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
-      {formData.hasDonatedBefore && <input type="date" name="lastDonationDate" onChange={onChange} />}
+      {formData.hasDonatedBefore && (
+        <input type="date" name="lastDonationDate" onChange={onChange} />
+      )}
 
       <h4>Lifestyle / Recent History</h4>
-      <label>Tattoo, piercing, or acupuncture in the last 6 months?</label>
-      <select name="tattooOrPiercing" onChange={onChange}>
+      <label>Tattoo/piercing/acupuncture in last 6 months?</label>
+      <select
+        name="tattooOrPiercing"
+        onChange={(e) => setFormData({ ...formData, tattooOrPiercing: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
 
-      <label>Vaccination in the last 28 days?</label>
-      <select name="vaccination" onChange={onChange}>
+      <label>Vaccination in last 28 days?</label>
+      <select
+        name="vaccination"
+        onChange={(e) => setFormData({ ...formData, vaccination: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
 
       <h4>For Women Donors</h4>
-      <label>Are you currently pregnant or breastfeeding?</label>
-      <select name="isPregnantOrBreastfeeding" onChange={onChange}>
+      <label>Pregnant or breastfeeding?</label>
+      <select
+        name="isPregnantOrBreastfeeding"
+        onChange={(e) => setFormData({ ...formData, isPregnantOrBreastfeeding: e.target.value === 'true' })}
+      >
         <option value={false}>No</option>
         <option value={true}>Yes</option>
       </select>
 
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={loading}>
+        {loading ? 'Submitting...' : 'Submit'}
+      </button>
     </form>
   );
 };

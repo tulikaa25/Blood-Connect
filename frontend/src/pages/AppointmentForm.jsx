@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import axios from '../utils/axiosConfig'; // ✅ Use centralized axios config
+import axios from '../utils/axiosConfig';
 
-const AppointmentForm = () => {
+const AppointmentForm = ({ onBookingSuccess }) => {
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState('');
-  const [loading, setLoading] = useState(false); // ✅ Optional UI improvement
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchSlots = async () => {
       try {
-        const res = await axios.get('/appointments/slots'); // ✅ No need for /api if baseURL is set
+        const res = await axios.get('/appointments/slots');
         setSlots(res.data);
       } catch (err) {
         console.error(err.response?.data || err.message);
@@ -23,14 +23,21 @@ const AppointmentForm = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedSlot) return;
+
     const [slotDate, slotTime] = selectedSlot.split('|');
     const newAppointment = { slotDate, slotTime };
 
     try {
       setLoading(true);
-      const res = await axios.post('/appointments/book', newAppointment);
+      await axios.post('/appointments/book', newAppointment);
       alert('Appointment booked successfully!');
+      setSelectedSlot('');
+      setError('');
       setLoading(false);
+
+      // Refresh appointments in parent
+      if (onBookingSuccess) onBookingSuccess();
     } catch (err) {
       console.error(err.response?.data || err.message);
       setError('Failed to book appointment');
@@ -40,10 +47,17 @@ const AppointmentForm = () => {
 
   return (
     <form onSubmit={onSubmit}>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="error">{error}</p>}
+
       <div>
-        <select value={selectedSlot} onChange={(e) => setSelectedSlot(e.target.value)} required>
-          <option value="" disabled>Select a slot</option>
+        <select
+          value={selectedSlot}
+          onChange={(e) => setSelectedSlot(e.target.value)}
+          required
+        >
+          <option value="" disabled>
+            Select a slot
+          </option>
           {slots.map((day) =>
             day.times.map((time) => (
               <option key={`${day.date}|${time}`} value={`${day.date}|${time}`}>
@@ -53,7 +67,8 @@ const AppointmentForm = () => {
           )}
         </select>
       </div>
-      <button type="submit" disabled={loading}>
+
+      <button type="submit" disabled={loading || !selectedSlot}>
         {loading ? 'Booking...' : 'Book Appointment'}
       </button>
     </form>

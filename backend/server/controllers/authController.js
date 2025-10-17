@@ -62,7 +62,6 @@ export const loginUser = async (req, res) => {
 
     try {
         const user = await User.findOne({ phone });
-
         if (user && (await bcrypt.compare(password, user.password))) {
             res.json({
                 _id: user.id,

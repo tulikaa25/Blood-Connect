@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get('/api/auth/me');
+        const res = await axios.get('/auth/me'); // centralized axios
         setUser(res.data);
-        setLoading(false);
       } catch (err) {
-        console.error(err);
+        console.error(err.response?.data || err.message);
+        setError('Failed to load profile');
+      } finally {
         setLoading(false);
       }
     };
@@ -20,14 +22,13 @@ const Profile = () => {
     fetchUser();
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (error) return <p className="error">{error}</p>;
 
   return (
     <div>
       <h2>My Profile</h2>
-      {user && (
+      {user ? (
         <div>
           <p>
             <strong>Name:</strong> {user.name}
@@ -36,7 +37,7 @@ const Profile = () => {
             <strong>Phone:</strong> {user.phone}
           </p>
           <p>
-            <strong>Blood Group:</strong> {user.bloodGroup}
+            <strong>Blood Group:</strong> {user.bloodGroup || 'N/A'}
           </p>
           <p>
             <strong>Eligibility Status:</strong> {user.eligibilityStatus}
@@ -47,6 +48,7 @@ const Profile = () => {
               {new Date(user.nextEligibleDate).toLocaleDateString()}
             </p>
           )}
+
           <h3>Donation History</h3>
           {user.donationHistory && user.donationHistory.length > 0 ? (
             <ul>
@@ -60,6 +62,8 @@ const Profile = () => {
             <p>No donation history.</p>
           )}
         </div>
+      ) : (
+        <p>No user data available.</p>
       )}
     </div>
   );
