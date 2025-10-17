@@ -4,38 +4,29 @@ const settingsSchema = new mongoose.Schema({
     totalBeds: {
         type: Number,
         required: true,
-        default: 6,
-    },
-    bufferBeds: {
-        type: Number,
-        required: true,
-        default: 1,
+        default: 2, // total physical beds in the center
     },
     slotDurationMinutes: {
         type: Number,
         required: true,
-        default: 30,
-    },
-    gracePeriodMinutes: {
-        type: Number,
-        required: true,
-        default: 10,
+        default: 40, // updated slot duration as per your last request
     },
     openingTime: {
         type: String,
         required: true,
-        default: '09:00',
+        default: '09:00', // center opening time
     },
     closingTime: {
         type: String,
         required: true,
-        default: '17:00',
+        default: '17:00', // center closing time
     },
     timeGapMinutes: {
         type: Number,
         required: true,
-        default: 10,
+        default: 10, // gap between consecutive slots
     },
+    
 });
 
 // Ensure only one settings document exists

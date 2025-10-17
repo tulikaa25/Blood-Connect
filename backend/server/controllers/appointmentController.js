@@ -1,4 +1,5 @@
 import Appointment from '../models/appointmentModel.js';
+import User from '../models/userModel.js';
 import Settings from '../models/settingsModel.js';
 
 // @desc    Get available slots for next 7 days
@@ -7,6 +8,14 @@ import Settings from '../models/settingsModel.js';
 export const getSlots = async (req, res) => {
     try {
         const userRole = req.user?.role || 'user'; // default to 'user' if not logged in
+        if (userRole !== 'admin' && req.user) {
+    const user = await User.findById(req.user.id);
+    if (!user || user.eligibilityStatus !== 'eligible') {
+        return res.status(400).json({
+            message: 'Complete screening form and be eligible to book slots.'
+        });
+    }
+}
 
         const settings = await Settings.getSingleton();
         const { openingTime, closingTime, slotDurationMinutes, totalBeds } = settings;
@@ -76,5 +85,66 @@ export const getSlots = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error fetching slots' });
+    }
+};
+
+export const bookAppointment = async (req, res) => {
+    const { slotDate, slotTime } = req.body;
+    const donorId = req.user.id;
+
+    if (!slotDate || !slotTime) {
+        return res.status(400).json({ message: 'Please provide slotDate and slotTime' });
+    }
+
+    try {
+        const donor = await User.findById(donorId);
+
+        // 1️⃣ Check donor eligibility
+        if (donor.eligibilityStatus !== 'eligible') {
+            return res.status(400).json({ message: 'You are not eligible to donate.' });
+        }
+
+        if (donor.nextEligibleDate && new Date() < new Date(donor.nextEligibleDate)) {
+            return res.status(400).json({ 
+                message: `You can donate again on ${new Date(donor.nextEligibleDate).toLocaleDateString()}` 
+            });
+        }
+
+        // 2️⃣ Check if donor already has a booked/active appointment
+        const existingAppointment = await Appointment.findOne({
+            donorId,
+            status: { $in: ['booked', 'checked-in', 'donating'] },
+        });
+
+        if (existingAppointment) {
+            return res.status(400).json({ message: 'You already have an active appointment.' });
+        }
+
+        // 3️⃣ Check slot availability
+        const settings = await Settings.getSingleton();
+        const { totalBeds } = settings;
+
+        const bookedCount = await Appointment.countDocuments({
+            slotDate: new Date(slotDate),
+            slotTime,
+            status: 'booked',
+        });
+
+        if (bookedCount >= totalBeds) {
+            return res.status(400).json({ message: 'Selected slot is full. Please choose another slot.' });
+        }
+
+        // 4️⃣ Create appointment
+        const appointment = await Appointment.create({
+            donorId,
+            slotDate,
+            slotTime,
+        });
+
+        res.status(201).json(appointment);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error while booking appointment' });
     }
 };
