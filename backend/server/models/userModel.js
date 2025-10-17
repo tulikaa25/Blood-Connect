@@ -1,23 +1,55 @@
 import mongoose from 'mongoose';
-
-const screeningSchema = new mongoose.Schema({       //updated on filling screening form 
-    medicalConditions: {
-        hiv: Boolean,
-        hepatitis: Boolean,
-        syphilis: Boolean,
-        malaria: Boolean,
-        heartDisease: Boolean,
-        cancer: Boolean,
-        epilepsy: Boolean,
-        tuberculosis: Boolean,
+const screeningSchema = new mongoose.Schema({
+    age: {
+        type: Number,
+        required: true,
+        min: 18, // minimum age to donate
+        max: 65, // optional upper limit
     },
-    longTermMedications: Boolean,
-    medicationDetails: String,
-    permanentlyDeferred: Boolean,
-    hasDonatedBefore: Boolean,
-    tattooOrPiercing: Boolean,
-    vaccination: Boolean,
-    isPregnantOrBreastfeeding: Boolean,
+    weight: {
+        type: Number,
+        required: true,
+        min: 45, // minimum weight in kg to donate
+    },
+    medicalConditions: {
+        hiv: { type: Boolean, default: false },
+        hepatitis: { type: Boolean, default: false },
+        syphilis: { type: Boolean, default: false },
+        malaria: { type: Boolean, default: false },
+        heartDisease: { type: Boolean, default: false },
+        cancer: { type: Boolean, default: false },
+        epilepsy: { type: Boolean, default: false },
+        tuberculosis: { type: Boolean, default: false },
+    },
+    longTermMedications: {
+        type: Boolean,
+        default: false,
+    },
+    medicationDetails: {
+        type: String,
+        default: null,
+        // will only be stored if longTermMedications = true
+    },
+    hasDonatedBefore: {
+        type: Boolean,
+        default: false,
+    },
+    lastDonationDate: {
+        type: Date,
+        default: null,
+    },
+    tattooOrPiercing: {
+        type: Boolean,
+        default: false,
+    },
+    vaccination: {
+        type: Boolean,
+        default: false,
+    },
+    isPregnantOrBreastfeeding: {
+        type: Boolean,
+        default: false,
+    }
 }, { _id: false });
 
 const donationHistorySchema = new mongoose.Schema({             //updated only after donation is completed 
@@ -44,12 +76,6 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
-    },
-    age: {
-        type: Number,
-    },
-    weight: {
-        type: Number,
     },
     bloodGroup: {
         type: String,
