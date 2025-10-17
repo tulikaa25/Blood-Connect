@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const screeningSchema = new mongoose.Schema({
+const screeningSchema = new mongoose.Schema({       //updated on filling screening form 
     medicalConditions: {
         hiv: Boolean,
         hepatitis: Boolean,
@@ -20,7 +20,7 @@ const screeningSchema = new mongoose.Schema({
     isPregnantOrBreastfeeding: Boolean,
 }, { _id: false });
 
-const donationHistorySchema = new mongoose.Schema({
+const donationHistorySchema = new mongoose.Schema({             //updated only after donation is completed 
     donationDate: {
         type: Date,
         required: true,
@@ -63,7 +63,11 @@ const userSchema = new mongoose.Schema({
     nextEligibleDate: {
         type: Date,
     },
-    donationHistory: [donationHistorySchema],
+
+
+    donationHistory: [donationHistorySchema],           //
+
+
     role: {
         type: String,
         enum: ['donor', 'admin'],
@@ -74,7 +78,9 @@ const userSchema = new mongoose.Schema({
         enum: ['pending_screening', 'eligible', 'deferred'],
         default: 'pending_screening',
     },
-    screeningData: screeningSchema,
+
+
+    screeningData: screeningSchema,                     //
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
