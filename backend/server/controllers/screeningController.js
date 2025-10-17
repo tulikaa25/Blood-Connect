@@ -5,7 +5,16 @@ import User from '../models/userModel.js';
 // @access  Private
 export const submitScreeningForm = async (req, res) => {
     const donorId = req.user.id;
-    const screeningData = req.body;
+    const {
+        age,
+        weight,
+        medicalConditions,
+        longTermMedications,
+        medicationDetails,
+        tattooOrPiercing,
+        vaccination,
+        isPregnantOrBreastfeeding
+    } = req.body;
 
     try {
         const user = await User.findById(donorId);
@@ -13,38 +22,62 @@ export const submitScreeningForm = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-          screeningData.fullName = user.name;
-          screeningData.hasDonatedBefore = user.donationHistory?.length > 0;
-          screeningData.lastDonationDate = user.lastDonationDate || null;
-        // Basic eligibility logic
-        const { medicalConditions, permanentlyDeferred } = screeningData;
+
+        // Validate age and weight
+        if (!age || age < 18 || age > 65) {
+            return res.status(400).json({ message: 'Age must be between 18 and 65' });
+        }
+        if (!weight || weight < 45) {
+            return res.status(400).json({ message: 'Weight must be at least 45 kg' });
+        }
+
+        // Set hasDonatedBefore from donationHistory
+        const hasDonatedBefore = user.donationHistory?.length > 0;
+        const lastDonationDate = hasDonatedBefore
+            ? user.donationHistory[user.donationHistory.length - 1].donationDate
+            : null;
+
+        // For females, allow breastfeeding/pregnant question, else force false
+        const gender = user.gender?.toLowerCase();
+        const breastfeedingOrPregnant =
+            gender === 'female' ? Boolean(isPregnantOrBreastfeeding) : false;
+
+        // Store screening data
+        user.screeningData = {
+            age,
+            weight,
+            medicalConditions,
+            longTermMedications: Boolean(longTermMedications),
+            medicationDetails: longTermMedications ? medicationDetails : null,
+            hasDonatedBefore,
+            lastDonationDate,
+            tattooOrPiercing: Boolean(tattooOrPiercing),
+            vaccination: Boolean(vaccination),
+            isPregnantOrBreastfeeding: breastfeedingOrPregnant,
+        };
+
+        // Determine eligibility
         let isEligible = true;
 
-        // Check for any serious medical conditions
-        if (Object.values(medicalConditions).some(condition => condition === true)) {
+        // Check serious medical conditions
+        if (Object.values(medicalConditions).some(cond => cond === true)) {
             isEligible = false;
         }
 
-        if (permanentlyDeferred) {
+        // Check age and weight eligibility
+        if (age < 18 || age > 65 || weight < 45) {
             isEligible = false;
         }
 
-        const newEligibilityStatus = isEligible ? 'eligible' : 'deferred';
-
-        // Update user with screening data and new eligibility status
-        user.screeningData = screeningData;
-        user.eligibilityStatus = newEligibilityStatus;
-        
-        // If deferred, we might want to set a nextEligibleDate far in the future,
-        // but for now, just setting the status is enough.
+        user.eligibilityStatus = isEligible ? 'eligible' : 'deferred';
 
         await user.save();
 
         res.json({
             message: 'Screening form submitted successfully.',
-            eligibilityStatus: newEligibilityStatus,
+            eligibilityStatus: user.eligibilityStatus,
+            screeningData: user.screeningData,
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error while submitting screening form' });
