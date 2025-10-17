@@ -13,7 +13,9 @@ export const submitScreeningForm = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
+          screeningData.fullName = user.name;
+          screeningData.hasDonatedBefore = user.donationHistory?.length > 0;
+          screeningData.lastDonationDate = user.lastDonationDate || null;
         // Basic eligibility logic
         const { medicalConditions, permanentlyDeferred } = screeningData;
         let isEligible = true;
