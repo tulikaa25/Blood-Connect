@@ -2,9 +2,10 @@ import Appointment from '../models/appointmentModel.js';
 import User from '../models/userModel.js';
 import Settings from '../models/settingsModel.js';
 
-// @desc    Get available slots for next 7 days
+
 // @route   GET /api/appointments/slots
 // @access  Public (User) / Private (Admin)
+//GETTING SLOTS
 export const getSlots = async (req, res) => {
     try {
         const userRole = req.user?.role || 'user'; // default to 'user' if not logged in
@@ -88,6 +89,11 @@ export const getSlots = async (req, res) => {
     }
 };
 
+
+
+
+
+//BOOKING SLOT
 export const bookAppointment = async (req, res) => {
     const { slotDate, slotTime } = req.body;
     const donorId = req.user.id;
@@ -146,5 +152,177 @@ export const bookAppointment = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error while booking appointment' });
+    }
+};
+
+
+//VERIFY APPT
+export const verifyQrAppointment = async (req, res) => {
+    try {
+        const { appointmentId, userId } = req.body;
+
+        if (!appointmentId || !userId) {
+            return res.status(400).json({ message: "Appointment ID & User ID are required" });
+        }
+
+        // Find appointment
+        const appointment = await Appointment.findById(appointmentId);
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Appointment not found" });
+        }
+
+        // Verify appointment belongs to the user
+        if (appointment.donorId.toString() !== userId) {
+            return res.status(401).json({ message: "This QR code does not belong to this user" });
+        }
+
+        // Check appointment is still valid (must be booked)
+        if (appointment.status !== "booked") {
+            return res.status(400).json({
+                message: `Cannot verify QR. Appointment is already '${appointment.status}'.`
+            });
+        }
+
+        // Success ✅ - Mark as checked in
+        appointment.status = "checked-in";
+        await appointment.save();
+
+        const user = await User.findById(userId).select("name phone bloodGroup");
+
+        res.status(200).json({
+            message: "QR verified successfully. Donor checked-in ✅",
+            appointment,
+            donorDetails: user
+        });
+
+    } catch (error) {
+        console.error("QR verification failed:", error);
+        res.status(500).json({ message: "Server error verifying QR" });
+    }
+};
+
+
+
+//CANCELLING APPT
+export const cancelAppointment = async (req, res) => {
+    try {
+        const { appointmentId } = req.body;
+        const userId = req.user.id;      // From auth middleware
+        const userRole = req.user.role;  // 'donor' or 'admin'
+
+        const appointment = await Appointment.findById(appointmentId);
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Appointment not found" });
+        }
+
+        // ✅ Donor cancel rules
+        if (userRole === "donor") {
+            // Can only cancel their own appointment
+            if (appointment.donorId.toString() !== userId) {
+                return res.status(403).json({ message: "" });
+            }
+
+            // Cannot cancel after check-in
+            if (["checked-in", "donating", "completed"].includes(appointment.status)) {
+                return res.status(400).json({
+                    message: `You cannot cancel after check-in. Current status: ${appointment.status}`
+                });
+            }
+        }
+
+        // ✅ Admin cancel rules (allowed anytime up to donation)
+        if (userRole === "admin") {
+            if (appointment.status === "completed") {
+                return res.status(400).json({ message: "Cannot cancel a completed appointment" });
+            }
+        }
+
+        // ✅ Only booked or checked-in can be cancelled
+        if (!["booked", "checked-in"].includes(appointment.status)) {
+            return res.status(400).json({
+                message: `Only booked or checked-in appointments can be cancelled. Current status: ${appointment.status}`
+            });
+        }
+
+        // ✅ Set cancel status
+        appointment.status = "cancelled";
+
+        await appointment.save();
+
+        return res.status(200).json({
+            message: userRole === "admin"
+                ? "Appointment cancelled by admin"
+                : "Your appointment has been cancelled"
+        });
+
+    } catch (error) {
+        console.error("Cancel appointment error:", error);
+        res.status(500).json({ message: "Error cancelling appointment" });
+    }
+};
+
+
+
+//MARK APPT COMPLETE 
+export const completeAppointment = async (req, res) => {
+    try {
+        const { appointmentId, passedMedicalCheck } = req.body;
+        const adminId = req.user.id;
+
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Only admins can complete appointments" });
+        }
+
+        if (!appointmentId || passedMedicalCheck === undefined) {
+            return res.status(400).json({ message: "appointmentId and passedMedicalCheck are required" });
+        }
+
+        const appointment = await Appointment.findById(appointmentId).populate("donorId");
+
+        if (!appointment) {
+            return res.status(404).json({ message: "Appointment not found" });
+        }
+
+        if (appointment.status !== "checked-in") {
+            return res.status(400).json({
+                message: `Only checked-in appointments can be completed. Current status: ${appointment.status}`
+            });
+        }
+
+        // If medical test failed → cancel appointment
+        if (!passedMedicalCheck) {
+            appointment.cancelReason = "Failed medical screening";
+            req.body.cancelReason = "Failed medical screening";
+            return cancelAppointment(req, res);  // ✅ reuse cancel logic
+        }
+
+        // If passed medical → complete donation
+        appointment.status = "completed";
+        appointment.completedAt = new Date();
+        await appointment.save();
+
+        // ✅ Update donor history
+        const donor = appointment.donorId;
+        donor.lastDonationDate = new Date();
+
+        // ✅ Next eligible date = 56 days later
+        const nextEligibleDate = new Date();
+        nextEligibleDate.setDate(nextEligibleDate.getDate() + 56);
+        donor.nextEligibleDate = nextEligibleDate;
+
+        donor.donationHistory.push({
+            appointmentId: appointment._id,
+            donationDate: new Date(),
+        });
+
+        await donor.save();
+
+        return res.status(200).json({ message: "Appointment marked as completed successfully" });
+
+    } catch (error) {
+        console.error("Complete appointment error:", error);
+        res.status(500).json({ message: "Error completing appointment" });
     }
 };
