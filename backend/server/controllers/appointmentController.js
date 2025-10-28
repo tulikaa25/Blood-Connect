@@ -156,44 +156,44 @@ export const bookAppointment = async (req, res) => {
 };
 
 
-//VERIFY APPT
+//VERIFY APPT using Appt id 
 export const verifyQrAppointment = async (req, res) => {
     try {
-        const { appointmentId, userId } = req.body;
+        const { appointmentId } = req.body;
 
-        if (!appointmentId || !userId) {
-            return res.status(400).json({ message: "Appointment ID & User ID are required" });
+        if (!appointmentId) {
+            return res.status(400).json({ message: "Appointment ID is required" });
         }
 
-        // Find appointment
-        const appointment = await Appointment.findById(appointmentId);
+        // 🔍 Find appointment and populate donor details
+        const appointment = await Appointment.findById(appointmentId).populate("donorId", "name phone bloodGroup");
 
         if (!appointment) {
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        // Verify appointment belongs to the user
-        if (appointment.donorId.toString() !== userId) {
-            return res.status(401).json({ message: "This QR code does not belong to this user" });
-        }
-
-        // Check appointment is still valid (must be booked)
+        // ⚠️ Check appointment is still valid (must be 'booked')
         if (appointment.status !== "booked") {
             return res.status(400).json({
                 message: `Cannot verify QR. Appointment is already '${appointment.status}'.`
             });
         }
 
-        // Success ✅ - Mark as checked in
+        // ✅ Mark as checked-in
         appointment.status = "checked-in";
         await appointment.save();
 
-        const user = await User.findById(userId).select("name phone bloodGroup");
+        // 🧾 Get donor details
+        const donor = appointment.donorId;
 
         res.status(200).json({
             message: "QR verified successfully. Donor checked-in ✅",
             appointment,
-            donorDetails: user
+            donorDetails: {
+                name: donor.name,
+                phone: donor.phone,
+                bloodGroup: donor.bloodGroup
+            }
         });
 
     } catch (error) {

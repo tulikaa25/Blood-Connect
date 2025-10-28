@@ -76,7 +76,7 @@ export const submitScreeningForm = async (req, res) => {
         res.json({
             message: 'Screening form submitted successfully.',
             eligibilityStatus: user.eligibilityStatus,
-            screeningData: user.screeningData,
+           
         });
     } catch (error) {
         console.error(error);

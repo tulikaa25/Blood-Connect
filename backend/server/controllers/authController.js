@@ -1,4 +1,5 @@
 import User from '../models/userModel.js';
+import { updateEligibilityIfNeeded } from '../utils/checkEligibility.js';   
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -63,11 +64,13 @@ export const loginUser = async (req, res) => {
     try {
         const user = await User.findOne({ phone });
         if (user && (await bcrypt.compare(password, user.password))) {
+            await updateEligibilityIfNeeded(user);
             res.json({
                 _id: user.id,
                 name: user.name,
                 phone: user.phone,
                 role: user.role,
+                eligibilityStatus: user.eligibilityStatus,
                 token: generateToken(user._id),
             });
         } else {
@@ -84,6 +87,7 @@ export const loginUser = async (req, res) => {
 export const getMe = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
+        await updateEligibilityIfNeeded(user);
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
