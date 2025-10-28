@@ -217,7 +217,7 @@ export const cancelAppointment = async (req, res) => {
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        // ✅ Donor cancel rules
+        //  Donor cancel rules
         if (userRole === "donor") {
             // Can only cancel their own appointment
             if (appointment.donorId.toString() !== userId) {
@@ -232,21 +232,21 @@ export const cancelAppointment = async (req, res) => {
             }
         }
 
-        // ✅ Admin cancel rules (allowed anytime up to donation)
+        //  Admin cancel rules (allowed anytime up to donation)
         if (userRole === "admin") {
             if (appointment.status === "completed") {
                 return res.status(400).json({ message: "Cannot cancel a completed appointment" });
             }
         }
 
-        // ✅ Only booked or checked-in can be cancelled
+        //  Only booked or checked-in can be cancelled
         if (!["booked", "checked-in"].includes(appointment.status)) {
             return res.status(400).json({
                 message: `Only booked or checked-in appointments can be cancelled. Current status: ${appointment.status}`
             });
         }
 
-        // ✅ Set cancel status
+        //  Set cancel status
         appointment.status = "cancelled";
 
         await appointment.save();
@@ -295,7 +295,7 @@ export const completeAppointment = async (req, res) => {
         if (!passedMedicalCheck) {
             appointment.cancelReason = "Failed medical screening";
             req.body.cancelReason = "Failed medical screening";
-            return cancelAppointment(req, res);  // ✅ reuse cancel logic
+            return cancelAppointment(req, res);  // reuse cancel logic
         }
 
         // If passed medical → complete donation
@@ -303,11 +303,11 @@ export const completeAppointment = async (req, res) => {
         appointment.completedAt = new Date();
         await appointment.save();
 
-        // ✅ Update donor history
+        // Update donor history
         const donor = appointment.donorId;
         donor.lastDonationDate = new Date();
 
-        // ✅ Next eligible date = 56 days later
+        // Next eligible date = 56 days later
         const nextEligibleDate = new Date();
         nextEligibleDate.setDate(nextEligibleDate.getDate() + 56);
         donor.nextEligibleDate = nextEligibleDate;
