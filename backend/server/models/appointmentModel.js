@@ -16,8 +16,8 @@ const appointmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['booked', 'checked-in', 'donating', 'completed', 'cancelled', 'no-show', 'waiting_in_queue'],
-        default: 'booked',
+        enum: ['N/A','booked','completed','cancelled'],
+        default: 'N/A',
     },
     checkInTime: {
         type: Date,
